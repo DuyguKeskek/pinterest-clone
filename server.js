@@ -1,8 +1,9 @@
-const { ApolloServer } = require("apollo-server")
+const { ApolloServer, AuthenticationError } = require("apollo-server")
 const mongoose = require("mongoose")
 mongoose.Promise = global.Promise;
 const fs = require('fs')
 const path = require('path')
+const jwt = require('jsonwebtoken')
 
 // Import typedefs and resolvers
 const filePath = path.join(__dirname, 'typeDefs.gql')
@@ -13,7 +14,7 @@ const resolvers = require('./resolvers')
 const User = require('./models/User')
 const Post = require('./models/Post')
 
-MONGO_URI= '_URI_'
+MONGO_URI= 'mongodb://duygukeskek:duygu2776149@ds235022.mlab.com:35022/pinterest-clone'
 
 // Connect to MLab database
 mongoose
@@ -24,13 +25,26 @@ mongoose
     .then(() => console.log('DB connected'))
     .catch(err => console.error(err))
 
+// Verify JWT Token passed from client
+const getUser = async token => {
+    if(token) {
+        try {
+            return await jwt.verify(token, process.env.SECRET)
+        } catch(err) {
+            throw new AuthenticationError('Your session has ended. Please sign in again.')
+        }
+    }
+}
 // Create Apollo/GraphQL server using typedefs, resolvers, and context object
 const server = new ApolloServer({
     typeDefs,
     resolvers,
-    context: {
-        User,
-        Post
+    formatError: (error) => ({
+        name: error.name, 
+        message: error.message.replace('Context creation failed:', '') }),
+    context: async ({ req }) => {
+        const token = (req.headers["authorization"])
+        return { User, Post, currentUser: await getUser(token)}
     }
 })
 
