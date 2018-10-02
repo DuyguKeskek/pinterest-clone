@@ -4,7 +4,13 @@ import router from './router'
 
 import { defaultClient as apolloClient} from './main'
 
-import { GET_CURRENT_USER, GET_POSTS, SIGNIN_USER, SIGNUP_USER } from './queries' 
+import { 
+  GET_CURRENT_USER, 
+  GET_POSTS,
+  ADD_POST,
+  SIGNIN_USER, 
+  SIGNUP_USER 
+} from './queries' 
 
 Vue.use(Vuex)
 
@@ -36,23 +42,6 @@ export default new Vuex.Store({
     }
   },
   actions: {
-    getCurrentUser: ({ commit }) => {
-      commit('setLoading', true)
-      apolloClient
-        .query({
-        query: GET_CURRENT_USER
-      })
-      .then(({ data }) => {
-        commit('setLoading', false)
-        // Add user data to state
-        commit('setUser', data.getCurrentUser)
-        console.log(data.getCurrentUser)
-      })
-      .catch(err => {
-        commit('setLoading', false)
-        console.log(err)
-      })
-    },
 
     getPosts: ({ commit }) => {
       commit('setLoading', true)
@@ -66,6 +55,25 @@ export default new Vuex.Store({
         // Get data from actions to state via mutations
         // commit passes data from actions along to mutation functions
         commit('setPosts', data.getPosts)
+      })
+      .catch(err => {
+        commit('setLoading', false)
+        console.log(err)
+      })
+    },
+
+    /* Auth Actions */
+    getCurrentUser: ({ commit }) => {
+      commit('setLoading', true)
+      apolloClient
+        .query({
+        query: GET_CURRENT_USER
+      })
+      .then(({ data }) => {
+        commit('setLoading', false)
+        // Add user data to state
+        commit('setUser', data.getCurrentUser)
+        console.log(data.getCurrentUser)
       })
       .catch(err => {
         commit('setLoading', false)
@@ -88,6 +96,41 @@ export default new Vuex.Store({
         })
         .catch(err => {
           commit('setError', err)
+          console.log(err)
+        })
+    },
+
+    addPost: ({ commit }, payload) => {
+      apolloClient
+        .mutate({
+          mutation: ADD_POST,
+          variables: payload,
+          update: (cache, { data: { addPost } }) => {
+            // First read the query you want to update
+            const data = cache.readQuery({ query: GET_POSTS })
+            // Create updated data
+            data.getPosts.unshift(addPost) // Add to the beginning of the array
+            // write updated data back to query
+            console.log(data)
+            cache.writeQuery({
+              query: GET_POSTS,
+              data
+            })
+          },
+          // op.res. ensures data is added immediately as we specified for the update function
+          optimisticResponse: {
+            __typename: 'Mutation',
+            addPost: {
+              __typename: 'Post',
+              _id: -1, // make sure it is added to the beginning of the array
+              ...payload
+            }
+          }
+        })
+        .then(({ data }) => {
+          console.log(data.addPost)
+        })
+        .catch(err => {
           console.log(err)
         })
     },
@@ -122,6 +165,7 @@ export default new Vuex.Store({
       router.push('/')
     }
   },
+
   getters: {
     posts: state => state.posts,
     user: state => state.user,

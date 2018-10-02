@@ -41,7 +41,7 @@ export default {
   methods: {
     handleGetCarouselPosts () {
       // reach out Vuex store, fire action that gets posts for carousel
-      this.$store.dispatch("getPosts")
+      this.$store.dispatch('getPosts')
     }
   }
 }

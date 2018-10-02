@@ -33,7 +33,10 @@ const router = new VueRouter({
     {
       path: '/post/add',
       name: 'AddPost',
-      component: AddPost
+      component: AddPost,
+      meta : {
+        requiresAuth : true
+      }
     },
     {
       path: '/profile',
